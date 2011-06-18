@@ -19,6 +19,15 @@ class Mustache
       super(method, include_private) || view.respond_to?(method, include_private)
     end
 
+    def self.template_extension
+      Config.template_extension
+    end
+
+    def self.path
+      Config.template_base_path
+    end
+
+
     # Redefine where Mustache::Rails templates locate their partials:
     #
     # (1) in the same directory as the current template file.
@@ -77,7 +86,7 @@ class Mustache
       def compile(template)
         mustache_class = mustache_class_from_template(template)
         mustache_class.template_file = mustache_template_file(template)
-        
+
         <<-MUSTACHE
           mustache = ::#{mustache_class}.new
           mustache.view = self
@@ -85,15 +94,15 @@ class Mustache
           mustache.context.update(local_assigns)
           variables = controller.instance_variable_names
           variables -= %w[@template]
-      
+
           if controller.respond_to?(:protected_instance_variables)
             variables -= controller.protected_instance_variables
           end
-      
+
           variables.each do |name|
             mustache.instance_variable_set(name, controller.instance_variable_get(name))
           end
-      
+
           # Declaring an +attr_reader+ for each instance variable in the
           # Mustache::Rails subclass makes them available to your templates.
           mustache.class.class_eval do
@@ -121,3 +130,4 @@ end
 
 ::ActiveSupport::Dependencies.autoload_paths << Rails.root.join("app", "views")
 ::ActionView::Template.register_template_handler(:rb, Mustache::Rails::TemplateHandler)
+::ActionView::Template.register_template_handler(:mustache, Mustache::Rails::TemplateHandler)
