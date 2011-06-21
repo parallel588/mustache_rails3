@@ -19,14 +19,26 @@ class Mustache
       super(method, include_private) || view.respond_to?(method, include_private)
     end
 
-    def self.template_extension
-      Config.template_extension
-    end
+    class << self
 
-    def self.path
-      Config.template_base_path
-    end
+      def template_extension
+        Config.template_extension
+      end
 
+      def path
+        Config.template_base_path
+      end
+
+      def template
+        @template ||= if Mustache::Rails::Config.template_from_store &&
+                          Mustache::Rails::Config.template_from_store.is_a?(Proc)
+                        Mustache::Rails::Config.template_from_store[template_name]
+                      else
+                        templateify(File.read(template_file))
+                      end
+      end
+
+    end
 
     # Redefine where Mustache::Rails templates locate their partials:
     #
@@ -48,28 +60,42 @@ class Mustache
     #
     # Mustache::Rails::Config.template_base_path = Rails.root.join('app', 'templates')
     module Config
-      def self.template_base_path
-        @template_base_path ||= ::Rails.root.join('app', 'templates')
-      end
+      class << self
 
-      def self.template_base_path=(value)
-        @template_base_path = value
-      end
+        def template_base_path
+          @template_base_path ||= ::Rails.root.join('app', 'templates')
+        end
 
-      def self.template_extension
-        @template_extension ||= 'html.mustache'
-      end
+        def template_base_path=(value)
+          @template_base_path = value
+        end
 
-      def self.template_extension=(value)
-        @template_extension = value
-      end
+        def template_extension
+          @template_extension ||= 'html.mustache'
+        end
 
-      def self.shared_path
-        @shared_path ||= ::Rails.root.join('app', 'templates', 'shared')
-      end
+        def template_extension=(value)
+          @template_extension = value
+        end
 
-      def self.shared_path=(value)
-        @shared_path = value
+        def shared_path
+          @shared_path ||= ::Rails.root.join('app', 'templates', 'shared')
+        end
+
+        def shared_path=(value)
+          @shared_path = value
+        end
+
+        # Store template in database
+        #
+        def template_from_store=(v)
+          @template_from_store = v
+        end
+
+        def template_from_store
+          @template_from_store
+        end
+
       end
     end
 
@@ -85,7 +111,13 @@ class Mustache
       # @param [ActionView::Template]
       def compile(template)
         mustache_class = mustache_class_from_template(template)
-        mustache_class.template_file = mustache_template_file(template)
+
+        if Mustache::Rails::Config.template_from_store &&
+            Mustache::Rails::Config.template_from_store.is_a?(Proc)
+          mustache_class.template = Mustache::Rails::Config.template_from_store[template.virtual_path]
+        else
+          mustache_class.template_file = mustache_template_file(template)
+        end
 
         <<-MUSTACHE
           mustache = ::#{mustache_class}.new
