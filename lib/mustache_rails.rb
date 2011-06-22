@@ -49,10 +49,18 @@ class Mustache
       partial_name = "_#{name}.#{Config.template_extension}"
       template_dir = Pathname.new(self.class.template_file).dirname
       partial_path = File.expand_path("#{template_dir}/#{partial_name}")
-      unless File.file?(partial_path)
-        partial_path = "#{Config.shared_path}/#{partial_name}"
+
+      if Mustache::Rails::Config.partial_from_store &&
+          Mustache::Rails::Config.partial_from_store.is_a?(Proc)
+        return Mustache::Rails::Config.partial_from_store[name]
+      else
+
+        unless File.file?(partial_path)
+          partial_path = "#{Config.shared_path}/#{partial_name}"
+        end
+        File.read(partial_path)
       end
-      File.read(partial_path)
+
     end
 
     # You can change these defaults in, say, a Rails initializer or
@@ -95,6 +103,17 @@ class Mustache
         def template_from_store
           @template_from_store
         end
+
+        # Store partial in database
+        #
+        def partial_from_store=(v)
+          @partial_from_store = v
+        end
+
+        def partial_from_store
+          @partial_from_store
+        end
+
 
       end
     end
