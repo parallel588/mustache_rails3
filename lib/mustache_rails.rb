@@ -8,6 +8,12 @@ class Mustache
   # Using {{{tag}}} will skip escaping HTML so if your mustache methods return
   # HTML, be sure to interpolate them using 3 mustaches.
 
+  # Override Mustache's default HTML escaper to only escape strings that
+  # aren't marked `html_safe?`
+  def escapeHTML(str)
+    str.html_safe? ? str : CGI.escapeHTML(str)
+  end
+
   class Rails < Mustache
     attr_accessor :view
 
