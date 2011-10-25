@@ -164,6 +164,11 @@ class Mustache
         MUSTACHE
       end
 
+      # In Rails 3.1+, #call takes the place of #compile
+      def self.call(template)
+        new.compile(template)
+      end
+
     private
 
       def mustache_class_from_template(template)
